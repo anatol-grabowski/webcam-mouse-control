@@ -18,8 +18,10 @@ def list_webcams():
 
     # Command as a list of strings
 
-    completed_process = subprocess.run('v4l2-ctl --list-devices 2>/dev/null',
-                                       shell=True, stdout=subprocess.PIPE, text=True)
+    completed_process = subprocess.run(
+        'v4l2-ctl --list-devices 2>/dev/null',
+        shell=True, stdout=subprocess.PIPE, text=True
+    )
 
     stdout_output = completed_process.stdout
     # print("Stdout Output:")
@@ -151,23 +153,44 @@ def cams_capture(cams, iso_date, pos):
     print(dt_iter)
 
 
-def calc_step(src, dst, max_offset=3):
-    direction = dst - src
-    distance = np.linalg.norm(direction)
+def spiral(xmin, ymin, xmax, ymax, xsteps, ysteps):
+    points_list = []
+    x, y = 0, 0
+    num_points = (xsteps + 1) * (ysteps + 1)
+    dir = 'right'
+    x0, y0, x1, y1 = 0, 0, xsteps, ysteps
 
-    if distance == 0:
-        return src  # Avoid division by zero
+    while len(points_list) < num_points:
+        points_list.append([x, y])
+        if dir == 'right':
+            x += 1
+            if x == x1:
+                y0 += 1
+                dir = 'down'
+            continue
+        if dir == 'down':
+            y += 1
+            if y == y1:
+                x1 -= 1
+                dir = 'left'
+            continue
+        if dir == 'left':
+            x -= 1
+            if x == x0:
+                y1 -= 1
+                dir = 'up'
+            continue
+        if dir == 'up':
+            y -= 1
+            if y == y0:
+                x0 += 1
+                dir = 'right'
+            continue
 
-    normalized_direction = direction / distance
-
-    offset_distance = min(max_offset, distance)
-    step = src + normalized_direction * offset_distance
-
-    # Ensure step has integer coordinates and doesn't overshoot dst
-    step = np.round(step).astype(int)
-    # print('st', src, dst, distance, normalized_direction, offset_distance, step)
-
-    return step
+    dx = (xmax - xmin) / xsteps
+    dy = (ymax - ymin) / ysteps
+    points = np.array([xmin, ymin]) + np.array(points_list) * np.array([dx, dy])
+    return points
 
 
 def main():
@@ -177,25 +200,17 @@ def main():
     os.mkdir(f'./data/{iso_date}')
 
     cams = cams_init()
+
+    edge_offset = 5
+    points = spiral(edge_offset, edge_offset, 2560-edge_offset, 1440-edge_offset, 16, 10)
     i = 0
 
     while True:
-        while True:
-            target = np.random.randint(low=[0, 0], high=[2560, 1440], size=(2))
-            if target[0] > 300 and target[1] > 300 and target[0] < 2560 - 300 and target[1] < 1440 - 300:
-                continue
-            break
-        # target = np.random.randint(low=[0, 0], high=, size=(2))
-        while True:
-            pos = np.array(pyautogui.position())
-            is_in_target = (target == pos).all()
-            if is_in_target:
-                break
-            i += 1
-            step = calc_step(pos, target, 200)
-            pyautogui.moveTo(*step)
-            input()
-            cams_capture(cams, iso_date=iso_date, pos=pyautogui.position())
+        step = points[i % len(points)]
+        i += 1
+        pyautogui.moveTo(*step)
+        input()
+        cams_capture(cams, iso_date=iso_date, pos=pyautogui.position())
 
     cams_deinit(cams)
 
