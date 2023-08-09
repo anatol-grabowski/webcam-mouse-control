@@ -149,8 +149,11 @@ def cams_capture(cams, iso_date, pos):
             dt = time.time() - t0
             filename = f'./data/{iso_date}/{camname} {(t * 1000):.0f}-{i+1} [{x} {y}] {dt*1000:.0f}.jpeg'
             cv2.imwrite(filename, frame)
+            if i == 0 and camname == 'brio':
+                fr = frame
     dt_iter = time.time() - t0_iter
     print(dt_iter)
+    return fr
 
 
 def spiral(xmin, ymin, xmax, ymax, xsteps, ysteps):
@@ -210,7 +213,9 @@ def main():
         i += 1
         pyautogui.moveTo(*step)
         input()
-        cams_capture(cams, iso_date=iso_date, pos=pyautogui.position())
+        fr = cams_capture(cams, iso_date=iso_date, pos=pyautogui.position())
+        cv2.imshow('cam', fr)
+        cv2.waitKey(1)
 
     cams_deinit(cams)
 
