@@ -11,6 +11,7 @@ import sys
 import pickle
 from modules.mp_landmarks_to_points import mp_landmarks_to_points
 from modules.draw_landmarks import draw_landmarks
+from modules.dataset import Dataset
 
 
 def get_xy_from_filename(filename):
@@ -24,12 +25,12 @@ def mp_detect_faces(rgb, num_warmup=3, num_avg=3):
     for i in range(num_warmup):
         output = face_mesh.process(rgb)
     output = face_mesh.process(rgb)
-    if output is None:
+    if output is None or output.multi_face_landmarks is None:
         return None
     faces = mp_landmarks_to_points(output.multi_face_landmarks)
     for i in range(num_avg - 1):
         output = face_mesh.process(rgb)
-        if output is None:
+        if output is None or output.multi_face_landmarks is None:
             return None
         faces += mp_landmarks_to_points(output.multi_face_landmarks)
     faces /= num_avg
@@ -46,8 +47,8 @@ def get_paths(globs):
 photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-09T15:37:18.761700-first-spiral-ok/brio *-1 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-09T19:53:51.113869-1-spiral-ok/brio *-1 *.jpeg',
+    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *-2 *.jpeg',
+    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *-3 *.jpeg',
 ]
 photo_paths = get_paths(photo_globs)
 
@@ -76,9 +77,6 @@ for filepath in photo_paths:
         dataset.append(datapoint)
     draw_landmarks(img, faces)
 
-dataset_filepath = './data/prepared.pickle'
-with open(dataset_filepath, 'wb') as file:
-    pickle.dump(dataset, file)
-print('saved to file', dataset_filepath)
+Dataset.save_dataset(dataset)
 
 cv2.destroyAllWindows()

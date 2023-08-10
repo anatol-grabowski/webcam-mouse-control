@@ -7,27 +7,10 @@ from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import pickle
 from modules.eye_position_predictor import EyePositionPredictor
+from modules.dataset import Dataset
 
 
-dataset_filepath = './data/prepared.pickle'
-
-
-def read_dataset(filepath):
-    with open(filepath, 'rb') as file:
-        dataset_list = pickle.load(file)
-    X = np.array([dp['landmarks'].ravel() for dp in dataset_list])
-    y = np.array([dp['cursor'] for dp in dataset_list])
-    monsize = np.array([2560, 1440])
-    y = y / monsize * 2 - 1
-    return X, y
-
-
-# Generate random data for demonstration (replace with your data)
-# num_samples = 1000
-# num_landmarks = 68
-# X = np.random.randn(num_samples, num_landmarks)
-# y = np.random.rand(num_samples, 2) * 2 - 1  # Scaling to -1 to 1 range
-X, y = read_dataset(dataset_filepath)
+X, y = Dataset.read_dataset()
 num_landmarks = X.shape[1]
 print('shapes', X.shape, y.shape)
 print('mean xy', y.mean(axis=0))
@@ -48,34 +31,55 @@ y_test_tensor = torch.tensor(y_test, dtype=torch.float32)
 
 # Initialize the model
 input_size = num_landmarks
-hidden_size = 128
-output_size = 2
-model = EyePositionPredictor(input_size, hidden_size, output_size)
+output_size = y.shape[1]
+model = EyePositionPredictor(input_size, output_size)
+if len(sys.argv) >= 3:
+    model = EyePositionPredictor.load_from_file(sys.argv[2])
+
+
+class CustomLoss(nn.Module):
+    def __init__(self, penalty_factor):
+        super(CustomLoss, self).__init__()
+        self.penalty_factor = penalty_factor
+
+    def forward(self, y_pred, y_true):
+        squared_errors = (y_pred - y_true) ** 2
+        weighted_errors = squared_errors * (1 + y_true ** 2) * self.penalty_factor
+        loss = torch.mean(weighted_errors)
+        return loss
+
 
 # Define loss function and optimizer
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+# criterion = nn.MSELoss()
+criterion = CustomLoss(1.5)
+optimizer = optim.Adam(model.parameters(), lr=float(sys.argv[1]))
+
+
+def evaluate():
+    model.eval()
+    with torch.no_grad():
+        test_outputs = model(X_test_tensor)
+        test_loss = criterion(test_outputs, y_test_tensor)
+        print(f'Test Loss: {test_loss.item():.4f}')
+    model.train()
+
 
 # Training loop
-num_epochs = 10000
+num_epochs = int(100e3)
 for epoch in range(num_epochs):
     optimizer.zero_grad()
     outputs = model(X_train_tensor)
     loss = criterion(outputs, y_train_tensor)
     loss.backward()
     optimizer.step()
-    if (epoch + 1) % 100 == 0:
+    if (epoch + 1) % 1000 == 0:
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
+    if (epoch + 1) % 5000 == 0:
+        evaluate()
+        model.save_to_file(f'./data/model-{epoch+1}.pickle')
 
-# Evaluation
-model.eval()
-with torch.no_grad():
-    test_outputs = model(X_test_tensor)
-    test_loss = criterion(test_outputs, y_test_tensor)
-    print(f'Test Loss: {test_loss.item():.4f}')
+evaluate()
 
 
 model_filepath = './data/model.pickle'
-with open(model_filepath, 'wb') as model_file:
-    pickle.dump(model, model_file)
-print('saved model to file', model_filepath)
+model.save_to_file(model_filepath)

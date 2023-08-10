@@ -5,15 +5,19 @@ model_filepath = './data/model.pickle'
 
 
 class EyePositionPredictor(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, output_size):
         super(EyePositionPredictor, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
+        self.fc1 = nn.Linear(input_size, 128)
         self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, output_size)
+        self.hidden1 = nn.Linear(128, 16)
+        self.relu2 = nn.ReLU()
+        self.fc2 = nn.Linear(16, output_size)
 
     def forward(self, x):
         x = self.fc1(x)
         x = self.relu(x)
+        x = self.hidden1(x)
+        x = self.relu2(x)
         x = self.fc2(x)
         return x
 

@@ -23,6 +23,9 @@ import numpy as np
 import pickle
 from modules.eye_position_predictor import EyePositionPredictor
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f'{device=}')
+
 
 def list_webcams():
     from collections import defaultdict
@@ -107,16 +110,6 @@ def cams_capture(cams):
     return frames
 
 
-face_mesh = mp.solutions.face_mesh.FaceMesh(
-    # static_image_mode=True,
-    max_num_faces=1,
-    refine_landmarks=True,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5,
-)
-model = EyePositionPredictor.load_from_file('./data/model.pickle')
-
-
 def predict(frame):
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     output = face_mesh.process(rgb)
@@ -131,7 +124,6 @@ def predict(frame):
         y = model(X)
 
     monsize = np.array([2560, 1440])
-    print(y)
     cursor = (y[0].numpy() + 1) / 2 * monsize
     cursor = cursor.clip([0, 0], [2560, 1440])
     return cursor, faces
@@ -147,29 +139,50 @@ def get_paths(globs):
 photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-09T15:37:18.761700-first-spiral-ok/brio *.jpeg',
+    # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-09T15:37:18.761700-first-spiral-ok/brio *-1 *.jpeg',
+    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *.jpeg',
 ]
 photo_paths = get_paths(photo_globs)
 
 
+pyautogui.FAILSAFE = False
+
+face_mesh = mp.solutions.face_mesh.FaceMesh(
+    # static_image_mode=True,
+    max_num_faces=1,
+    refine_landmarks=True,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5,
+)
+model = EyePositionPredictor.load_from_file(sys.argv[1])
+
+
+numavg = 3
+avgs = np.zeros(shape=(numavg, 2))
+
+
 def main():
+    global avgs, numavg
     print('hello')
 
     cams = cams_init()
 
-    # while True:
-    #     frames = cams_capture(cams)
-    #     frame = frames['brio']
+    while True:
+        frames = cams_capture(cams)
+        frame = frames['brio']
 
-    pyautogui.FAILSAFE = False
-    for filepath in photo_paths:
-        frame = cv2.imread(filepath)
+    # for filepath in photo_paths:
+    #     frame = cv2.imread(filepath)
 
         cursor, faces = predict(frame)
         print(cursor)
         if cursor is not None:
-            pyautogui.moveTo(*cursor)
-        draw_landmarks(frame, faces)
+            avgs = np.roll(avgs, -1, axis=0)
+            avgs[-1] = cursor
+            avg = avgs.mean(axis=0)
+            print(avg)
+            pyautogui.moveTo(*avg)
+        # draw_landmarks(frame, faces)
         # input()
 
     cams_deinit(cams)
