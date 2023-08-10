@@ -51,35 +51,17 @@ def cams_init():
     return camsdict
 
 
-def cams_capture(cams, iso_date, pos):
-    t0_iter = time.time()
-    t = time.time()
-    for i in range(3):
-        for camname, cam in cams.items():
-            x, y = pos
-            # print(x, y)
-            t0 = time.time()
-            ret, frame = cam.read()
-            dt = time.time() - t0
-            filename = f'./data/{iso_date}/{camname} {(t * 1000):.0f} {c}-{i+1} [{x} {y}].jpeg'
-            cv2.imwrite(filename, frame)
-            if i == 1 and camname == 'brio':
-                fr = frame
-    dt_iter = time.time() - t0_iter
-    print(dt_iter)
-    return fr
-
-
 def on_press(key):
     global cams, iso_date, i, pos
     if key == pynput.keyboard.Key.enter:
         frames = {}
         x, y = pyautogui.position()
         t0 = time.time()
+        time.sleep(0.1)
         for camname, cam in cams.items():
             for j in range(3):
                 ret, frame = cam.read()
-                filename = f'./data/{iso_date}/{camname} {i}-{j} [{x} {y}].jpeg'
+                filename = f'./data/{iso_date}/{camname} {i}-{j} [{x} {y}] {int(time.time() * 1000)}.jpeg'
                 frames[filename] = frame
         dt = time.time() - t0
         print(f'{dt*1000:.0f}')
