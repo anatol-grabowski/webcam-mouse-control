@@ -80,7 +80,7 @@ iso_date = datetime.datetime.now().isoformat()
 os.mkdir(f'./data/{iso_date}')
 
 edge_offset = 10
-points = spiral(edge_offset, edge_offset, 2560-edge_offset, 1440-edge_offset, 8, 5)
+points = spiral(edge_offset, edge_offset, 2560-edge_offset, 1440-edge_offset, 15, 9)
 i = 0
 pyautogui.moveTo(*points[i % len(points)])
 

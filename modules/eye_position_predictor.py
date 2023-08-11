@@ -30,3 +30,17 @@ class EyePositionPredictor(nn.Module):
         with open(filepath, 'rb') as file:
             model = pickle.load(file)
         return model
+
+# top inputs:
+    # inputs = X_train_tensor.clone().detach().requires_grad_(True)
+    # optimizer.zero_grad()
+    # outputs = model(inputs)
+    # loss = criterion(outputs, y_train_tensor)
+    # loss.backward()
+    # grads = inputs.grad.cpu().detach().numpy()
+    # print(grads.shape)
+    # scores = grads.mean(axis=0)
+    # print(scores.shape)
+    # # print(scores)
+    # indices = (np.argsort(scores)[::-1] / 2).astype(dtype=np.int)
+    # print(indices.tolist())

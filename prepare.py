@@ -47,8 +47,7 @@ def get_paths(globs):
 photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *-2 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *-3 *.jpeg',
+    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *.jpeg',
 ]
 photo_paths = get_paths(photo_globs)
 
