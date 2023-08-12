@@ -1,4 +1,5 @@
 # import pyautogui
+import sys
 import time
 import matplotlib.pyplot as plt
 import numpy as np
@@ -45,10 +46,15 @@ def spiral(xmin, ymin, xmax, ymax, xsteps, ysteps):
 
 
 # Example usage
-monsize = [2560, 1440]
 edge_offset = 10
-points = spiral(edge_offset, edge_offset, 2560-edge_offset, 1440-edge_offset, 16, 10)
-print(points)
+monsize = np.array([2560, 1440])
+steps = np.array([8, 5])
+edge = np.array([edge_offset, edge_offset, monsize[0]-edge_offset, monsize[1]-edge_offset])
+points = spiral(*edge, *steps)
+dstep = np.array([edge[2] - edge[0], edge[3] - edge[1]]) / (steps + 1)
+r = np.random.randint(-dstep/2, dstep/2, size=[len(points), 2])
+points = (points + r).clip([0, 0], monsize - 2)
+print(points.max(axis=0))
 # for x, y in points:
 #     pyautogui.moveTo(x, y)
 #     time.sleep(0.01)

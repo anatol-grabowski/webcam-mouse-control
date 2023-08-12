@@ -11,6 +11,7 @@ import os
 import numpy as np
 from modules.list_webcams import list_webcams
 from modules.spiral import spiral
+import sys
 
 
 def cams_init():
@@ -52,7 +53,7 @@ def cams_init():
 
 
 def on_press(key):
-    global cams, iso_date, i, pos
+    global cams, iso_date, i, pos, dirpath
     if key == pynput.keyboard.Key.enter:
         frames = {}
         x, y = pyautogui.position()
@@ -61,7 +62,7 @@ def on_press(key):
         for camname, cam in cams.items():
             for j in range(3):
                 ret, frame = cam.read()
-                filename = f'./data/{iso_date}/{camname} {i}-{j} [{x} {y}] {int(time.time() * 1000)}.jpeg'
+                filename = f'{dirpath}/{camname} {i}-{j} [{x} {y}] {int(time.time() * 1000)}.jpeg'
                 frames[filename] = frame
         dt = time.time() - t0
         print(f'{dt*1000:.0f}')
@@ -77,12 +78,23 @@ kb_listener.start()
 
 cams = cams_init()
 iso_date = datetime.datetime.now().isoformat()
-os.mkdir(f'./data/{iso_date}')
 
+pyautogui.FAILSAFE = False
 edge_offset = 10
-points = spiral(edge_offset, edge_offset, 2560-edge_offset, 1440-edge_offset, 15, 9)
-i = 0
-pyautogui.moveTo(*points[i % len(points)])
+monsize = np.array([2560, 1440])
+steps = np.array([8, 5])
+edge = np.array([edge_offset, edge_offset, monsize[0]-edge_offset, monsize[1]-edge_offset])
+points = spiral(*edge, *steps)
+dstep = np.array([edge[2] - edge[0], edge[3] - edge[1]]) / (steps + 1)
+randomness = 1
+r = np.random.randint(-dstep/2, dstep/2, size=[len(points), 2]) * randomness
+points = (points + r).clip([0, 0], [monsize[0] - 3, monsize[1] - 4])
+print(points.max(axis=0))
+i = 0 if len(sys.argv) < 2 else int(sys.argv[1])
+pyautogui.moveTo(*points[i % len(points)], 0.1)
+
+dirpath = f'./data/{iso_date}-{steps[0]}x{steps[1]}{"r" if randomness != 0 else ""}'
+os.mkdir(dirpath)
 
 while True:
     for camname, cam in cams.items():

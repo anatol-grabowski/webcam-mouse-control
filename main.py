@@ -21,7 +21,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import pickle
-from modules.eye_position_predictor import EyePositionPredictor
+from modules.eye_position_predictor import EyePositionPredictor, train_indices
+from modules.mediapipe_detect_faces import mediapipe_detect_faces
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'{device=}')
@@ -68,9 +69,9 @@ def cams_init():
 
     print('cam1')
     cam1 = cv2.VideoCapture(briocams[0])
-    cam1.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-    cam1.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-    cam1.set(cv2.CAP_PROP_FPS, 30)
+    cam1.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cam1.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cam1.set(cv2.CAP_PROP_FPS, 60)
     camsdict['brio'] = cam1
 
     # print('cam2')
@@ -112,11 +113,10 @@ def cams_capture(cams):
 
 def predict(frame):
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    output = face_mesh.process(rgb)
-    faces = mp_landmarks_to_points(output.multi_face_landmarks)
+    faces = mediapipe_detect_faces(face_mesh, rgb, num_warmup=1, num_avg=3)
     if faces is None:
         return None, None
-    X = faces[0].ravel().reshape(1, -1)
+    X = faces[0][train_indices].ravel().reshape(1, -1)
     X = torch.tensor(X, dtype=torch.float32)
 
     model.eval()
@@ -181,8 +181,8 @@ def main():
             avgs[-1] = cursor
             avg = avgs.mean(axis=0)
             print(avg)
-            pyautogui.moveTo(*avg)
-        # draw_landmarks(frame, faces)
+            pyautogui.moveTo(*avg, 0.0, pyautogui.easeInOutQuad)
+        draw_landmarks(frame, faces)
         # input()
 
     cams_deinit(cams)

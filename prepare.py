@@ -9,9 +9,9 @@ from mediapipe.tasks.python import vision
 import re
 import sys
 import pickle
-from modules.mp_landmarks_to_points import mp_landmarks_to_points
 from modules.draw_landmarks import draw_landmarks
 from modules.dataset import Dataset
+from modules.mediapipe_detect_faces import mediapipe_detect_faces
 
 
 def get_xy_from_filename(filename):
@@ -19,22 +19,6 @@ def get_xy_from_filename(filename):
     match = re.search(pattern, filename)
     x, y = map(int, match.groups())
     return x, y
-
-
-def mp_detect_faces(rgb, num_warmup=3, num_avg=3):
-    for i in range(num_warmup):
-        output = face_mesh.process(rgb)
-    output = face_mesh.process(rgb)
-    if output is None or output.multi_face_landmarks is None:
-        return None
-    faces = mp_landmarks_to_points(output.multi_face_landmarks)
-    for i in range(num_avg - 1):
-        output = face_mesh.process(rgb)
-        if output is None or output.multi_face_landmarks is None:
-            return None
-        faces += mp_landmarks_to_points(output.multi_face_landmarks)
-    faces /= num_avg
-    return faces
 
 
 def get_paths(globs):
@@ -64,7 +48,7 @@ for filepath in photo_paths:
     monsize = np.array([2560, 1440])
     img = cv2.imread(filepath)
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    faces = mp_detect_faces(rgb)
+    faces = mediapipe_detect_faces(face_mesh, rgb)
     print(filepath, xy, faces is not None)
     if faces is not None:
         datapoint = {

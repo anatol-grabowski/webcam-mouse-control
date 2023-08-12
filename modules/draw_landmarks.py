@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from .eye_position_predictor import train_indices
 
 
 def draw_landmarks(img, faces):
@@ -19,7 +20,7 @@ def draw_landmarks(img, faces):
         cv2.circle(img, center_left, int(l_radius), (0, 255, 0), 1, cv2.LINE_AA)
         cv2.circle(img, center_right, int(r_radius), (0, 255, 0), 1, cv2.LINE_AA)
 
-        for x, y in points:
+        for x, y in points[train_indices]:
             cv2.circle(img, (x, y), 1, (255, 255, 0), -1)
         cv2.circle(img, center_right, 1, (0, 255, 0), 1)
     cv2.imshow("Photo with Landmarks", img)
