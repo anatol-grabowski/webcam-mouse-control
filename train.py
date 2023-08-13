@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import pickle
-from modules.eye_position_predictor import EyePositionPredictor
+from modules.cursor_predictor import EyePositionPredictor
 from modules.dataset import Dataset
 
 

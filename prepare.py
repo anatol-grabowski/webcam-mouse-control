@@ -12,6 +12,8 @@ import pickle
 from modules.draw_landmarks import draw_landmarks
 from modules.dataset import Dataset
 from modules.mediapipe_detect_faces import mediapipe_detect_faces
+from modules.detect_blink import detect_blink
+from modules.get_paths import get_paths
 from tqdm import tqdm
 
 
@@ -22,30 +24,12 @@ def get_xy_from_filename(filename):
     return x, y
 
 
-def get_paths(globs):
-    glpaths = []
-    for gl in globs:
-        glpaths.extend(glob.glob(gl))
-    return [str(p) for p in glpaths]
-
-
 photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
     '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *.jpeg',
 ]
 photo_paths = get_paths(photo_globs)
-
-
-def detect_blink(face):
-    blink_threshold = 0.35
-    left_h = np.linalg.norm(face[386] - face[374])
-    left_w = np.linalg.norm(face[362] - face[263])
-    left_blink = left_h < blink_threshold * left_w
-    right_h = np.linalg.norm(face[145] - face[159])
-    right_w = np.linalg.norm(face[133] - face[33])
-    right_blink = right_h < blink_threshold * right_w
-    return left_blink, right_blink
 
 
 face_mesh = mp.solutions.face_mesh.FaceMesh(
