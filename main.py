@@ -1,3 +1,4 @@
+import re
 from modules.draw_landmarks import draw_landmarks
 from modules.mp_landmarks_to_points import mp_landmarks_to_points
 import cv2
@@ -112,16 +113,27 @@ def cams_capture(cams):
 
 
 def predict(frame):
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    rgb = cv2.cvtColor(frame, 1, cv2.COLOR_BGR2RGB)
     faces = mediapipe_detect_faces(face_mesh, rgb, num_warmup=1, num_avg=3)
     if faces is None:
         return None, None
     X = faces[0][train_indices].ravel().reshape(1, -1)
     X = torch.tensor(X, dtype=torch.float32)
 
-    model.eval()
-    with torch.no_grad():
-        y = model(X)
+    imsize = np.array([frame.shape[1], frame.shape[0]])
+    predictions = []
+    for model in models:
+        model.eval()
+        with torch.no_grad():
+            prediction = model(X)
+        predictions.append(prediction)
+        m_cursor = (prediction[0].numpy() + 1) / 2 * imsize
+        cv2.circle(frame, m_cursor.astype(int), 2, (255, 0, 0), -1)
+    predictions = torch.stack(predictions)
+    y = torch.mean(predictions, dim=0)
+    m_cursor = (y[0].numpy() + 1) / 2 * imsize
+    print('im', imsize, m_cursor, y)
+    cv2.circle(frame, m_cursor.astype(int), 4, (255, 0, 0), -1)
 
     monsize = np.array([2560, 1440])
     cursor = (y[0].numpy() + 1) / 2 * monsize
@@ -154,11 +166,34 @@ face_mesh = mp.solutions.face_mesh.FaceMesh(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5,
 )
-model = EyePositionPredictor.load_from_file(sys.argv[1])
+
+
+mpaths = sys.argv[1:]
+models = [EyePositionPredictor.load_from_file(p) for p in mpaths]
+scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
+print(f'{scores=}')
+# min_perf = scores.min()
+# max_perf = scores.max()
+# normalized_perf = [(perf - min_perf) / (max_perf - min_perf) for perf in scores]
+# weights = [1 - np for np in normalized_perf]
+# sum_weights = sum(weights)
+# normalized_weights = [weight / sum_weights for weight in weights]
+# print("Normalized Weights:", normalized_weights)
 
 
 numavg = 3
 avgs = np.zeros(shape=(numavg, 2))
+
+
+def detect_blink(face):
+    blink_threshold = 0.35
+    left_h = np.linalg.norm(face[386] - face[374])
+    left_w = np.linalg.norm(face[362] - face[263])
+    left_blink = left_h < blink_threshold * left_w
+    right_h = np.linalg.norm(face[145] - face[159])
+    right_w = np.linalg.norm(face[133] - face[33])
+    right_blink = right_h < blink_threshold * right_w
+    return left_blink, right_blink
 
 
 def main():
@@ -167,12 +202,12 @@ def main():
 
     cams = cams_init()
 
-    while True:
-        frames = cams_capture(cams)
-        frame = frames['brio']
+    # while True:
+    #     frames = cams_capture(cams)
+    #     frame = frames['brio']
 
-    # for filepath in photo_paths:
-    #     frame = cv2.imread(filepath)
+    for filepath in photo_paths:
+        frame = cv2.imread(filepath)
 
         cursor, faces = predict(frame)
         print(cursor)
@@ -182,8 +217,12 @@ def main():
             avg = avgs.mean(axis=0)
             print(avg)
             pyautogui.moveTo(*avg, 0.0, pyautogui.easeInOutQuad)
+            left_blink, right_blink = detect_blink(faces[0])
+            cv2.putText(frame, f"{'L' if left_blink else ' '} {'R' if right_blink else ''}",
+                        (100, 100), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 255, 0), thickness=2)
+
         draw_landmarks(frame, faces)
-        # input()
+        input()
 
     cams_deinit(cams)
 

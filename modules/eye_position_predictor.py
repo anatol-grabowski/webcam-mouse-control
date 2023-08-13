@@ -108,3 +108,100 @@ class EyePositionPredictor(nn.Module):
     def model_name(self):
         layers = [self.input_size, *model_arch, self.output_size]
         return "-".join([str(l) for l in layers])
+
+
+model_arch = [512, 256, 128, 32]
+
+
+class EyePositionPredictor(nn.Module):
+    def __init__(self, input_size, output_size):
+        super(EyePositionPredictor, self).__init__()
+        self.input_size = input_size
+        self.output_size = output_size
+        self.fc1 = nn.Linear(input_size, model_arch[0])
+        self.relu = nn.ReLU()
+        self.hidden1 = nn.Linear(model_arch[0], model_arch[1])
+        self.relu2 = nn.ReLU()
+        self.hidden2 = nn.Linear(model_arch[1], model_arch[2])
+        self.relu3 = nn.ReLU()
+        if len(model_arch) > 3:
+            self.hidden3 = nn.Linear(model_arch[2], model_arch[3])
+            self.relu4 = nn.ReLU()
+        self.fc2 = nn.Linear(model_arch[-1], output_size)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.hidden1(x)
+        x = self.relu2(x)
+        x = self.hidden2(x)
+        x = self.relu3(x)
+        if len(model_arch) > 3:
+            x = self.hidden3(x)
+            x = self.relu4(x)
+        x = self.fc2(x)
+        return x
+
+    def save_to_file(self, filepath=model_filepath):
+        self.to(torch.device('cpu'))
+        with open(filepath, 'wb') as model_file:
+            pickle.dump(self, model_file)
+        print('saved model to file', filepath)
+        self.to(device)
+
+    def load_from_file(filepath=model_filepath):
+        with open(filepath, 'rb') as file:
+            model = pickle.load(file)
+        return model
+
+    def model_name(self):
+        layers = [self.input_size, *model_arch, self.output_size]
+        return f'{"-".join([str(l) for l in layers])}'
+
+
+class EyePositionPredictor(nn.Module):
+    def __init__(self, arch):
+        super(EyePositionPredictor, self).__init__()
+        self.arch = arch
+        self.fc1 = nn.Linear(*arch[0:1+1])
+        self.relu = nn.ReLU()
+        if len(arch) > 3:
+            self.hidden1 = nn.Linear(*arch[1:2+1])
+            self.relu2 = nn.ReLU()
+        if len(arch) > 4:
+            self.hidden2 = nn.Linear(*arch[2:3+1])
+            self.relu3 = nn.ReLU()
+        if len(arch) > 5:
+            self.hidden3 = nn.Linear(*arch[3:4+1])
+            self.relu4 = nn.ReLU()
+        self.fc2 = nn.Linear(*arch[-2:])
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        if len(self.arch) > 3:
+            x = self.hidden1(x)
+            x = self.relu2(x)
+        if len(self.arch) > 4:
+            x = self.hidden2(x)
+            x = self.relu3(x)
+        if len(self.arch) > 5:
+            x = self.hidden3(x)
+            x = self.relu4(x)
+        x = self.fc2(x)
+        return x
+
+    def save_to_file(self, filepath=model_filepath):
+        self.to(torch.device('cpu'))
+        with open(filepath, 'wb') as model_file:
+            pickle.dump(self, model_file)
+        print('saved model to file', filepath)
+        self.to(device)
+
+    def load_from_file(filepath=model_filepath):
+        with open(filepath, 'rb') as file:
+            model = pickle.load(file)
+        return model
+
+    def model_name(self):
+        return f'{"-".join([str(l) for l in self.arch])}'
