@@ -91,7 +91,7 @@ r = np.random.randint(-dstep/2, dstep/2, size=[len(points), 2]) * randomness
 points = (points + r).clip([0, 0], [monsize[0] - 3, monsize[1] - 4])
 print(points.max(axis=0))
 i = 0 if len(sys.argv) < 2 else int(sys.argv[1])
-pyautogui.moveTo(*points[i % len(points)], 0.1)
+pyautogui.moveTo(*points[i % len(points)], 0.2, pyautogui.easeInOutQuad)
 
 dirpath = f'./data/{iso_date}-{steps[0]}x{steps[1]}{"r" if randomness != 0 else ""}'
 os.mkdir(dirpath)

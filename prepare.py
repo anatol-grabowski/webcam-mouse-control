@@ -12,6 +12,7 @@ import pickle
 from modules.draw_landmarks import draw_landmarks
 from modules.dataset import Dataset
 from modules.mediapipe_detect_faces import mediapipe_detect_faces
+from tqdm import tqdm
 
 
 def get_xy_from_filename(filename):
@@ -35,6 +36,18 @@ photo_globs = [
 ]
 photo_paths = get_paths(photo_globs)
 
+
+def detect_blink(face):
+    blink_threshold = 0.35
+    left_h = np.linalg.norm(face[386] - face[374])
+    left_w = np.linalg.norm(face[362] - face[263])
+    left_blink = left_h < blink_threshold * left_w
+    right_h = np.linalg.norm(face[145] - face[159])
+    right_w = np.linalg.norm(face[133] - face[33])
+    right_blink = right_h < blink_threshold * right_w
+    return left_blink, right_blink
+
+
 face_mesh = mp.solutions.face_mesh.FaceMesh(
     # static_image_mode=True,
     max_num_faces=1,
@@ -43,6 +56,7 @@ face_mesh = mp.solutions.face_mesh.FaceMesh(
     min_tracking_confidence=0.5,
 )
 dataset = []
+num_blinks = 0
 for filepath in photo_paths:
     xy = np.array(get_xy_from_filename(filepath))
     monsize = np.array([2560, 1440])
@@ -57,9 +71,17 @@ for filepath in photo_paths:
             'cursor_norm': xy / monsize * 2 - 1,
             'landmarks': faces[0],
         }
-        dataset.append(datapoint)
+        left_blink, right_blink = detect_blink(faces[0])
+        if not left_blink and not right_blink:
+            dataset.append(datapoint)
+        else:
+            num_blinks += 1
+            print('skip blink')
+            cv2.putText(img, f"{'L' if left_blink else ' '} {'R' if right_blink else ''}",
+                        (100, 100), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 255, 0), thickness=2)
     draw_landmarks(img, faces)
 
 Dataset.save_dataset(dataset)
+print(f'{num_blinks=}')
 
 cv2.destroyAllWindows()
