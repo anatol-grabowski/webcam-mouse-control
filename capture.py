@@ -9,7 +9,7 @@ import time
 import datetime
 import os
 import numpy as np
-from modules.list_webcams import list_webcams
+from modules.webcam import list_webcams
 from modules.spiral import spiral
 import sys
 

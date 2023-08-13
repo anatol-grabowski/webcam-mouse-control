@@ -13,17 +13,9 @@ from modules.draw_landmarks import draw_landmarks
 from modules.dataset import Dataset
 from modules.mediapipe_detect_faces import mediapipe_detect_faces
 from modules.detect_blink import detect_blink
-from modules.get_paths import get_paths
+from modules.get_paths import get_paths, get_xy_from_filename
 from tqdm import tqdm
 from modules.predict_cursor import pixelxy_to_cursor
-
-
-def get_xy_from_filename(filename):
-    pattern = r'\[(\d+) (\d+)\]'
-    match = re.search(pattern, filename)
-    x, y = map(int, match.groups())
-    return x, y
-
 
 photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
