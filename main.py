@@ -38,7 +38,7 @@ def draw_cursors(frame, cursor, cursors):
         cv2.circle(frame, cursor_to_pixelxy(cur, imsize).astype(int), 2, (255, 0, 0), -1)
 
 
-def draw(frame, cursor, cursors, faces):
+def render(frame, cursor, cursors, faces):
     draw_landmarks(frame, faces)
     frame = cv2.flip(frame, 1)
     if cursor is not None:
@@ -101,7 +101,8 @@ def main():
     #     frame = cv2.imread(filepath)
 
         cursor, cursors, faces = predict_cursor(frame, models)
-        print(cursor)
+        cursor = cursor.reshape(2)
+        cursors = cursors.reshape(-1, 2)
         if cursor is not None:
             avgs = np.roll(avgs, -1, axis=0)
             avgs[-1] = cursor
@@ -109,7 +110,7 @@ def main():
             print(avg)
             pyautogui.moveTo(*cursor_to_pixelxy(avg, monsize), 0.0, pyautogui.easeInOutQuad)
 
-        draw(frame, cursor, cursors, faces)
+        render(frame, cursor, cursors, faces)
         # input()
 
     cams_deinit(cams)

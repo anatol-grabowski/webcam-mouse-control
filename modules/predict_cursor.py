@@ -42,21 +42,25 @@ def predict_cursor(frame, models):
     X = faces[0][train_indices].ravel().reshape(1, -1)
     X = torch.tensor(X, dtype=torch.float32)
 
-    predictions = []
+    ys = []
     for model, weight in models.items():
         model.eval()
         with torch.no_grad():
             prediction = model(X)
-        predictions.append(prediction)
-    predictions = torch.stack(predictions)
+        ys.append(prediction)
+    ys = torch.stack(ys)
     weights = torch.tensor([w for w in models.values()])
-    print(predictions.size(), weights.size())
-    y = torch.mean(predictions * weights.view(-1, 1, 1), dim=0)
-    cursor = y[0].numpy()
-    cursors = predictions.numpy().reshape(-1, 2)
+    y = torch.mean(ys * weights.view(-1, 1, 1), dim=0)
+    cursor = y.numpy()
+    cursors = ys.numpy()
     return cursor, cursors, faces
 
 
 def cursor_to_pixelxy(cursor, monsize):
     xy = (cursor + 1) / 2 * monsize
+    return xy
+
+
+def pixelxy_to_cursor(xy, monsize):
+    cursor = xy / monsize * 2 - 1,
     return xy

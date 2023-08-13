@@ -15,6 +15,7 @@ from modules.mediapipe_detect_faces import mediapipe_detect_faces
 from modules.detect_blink import detect_blink
 from modules.get_paths import get_paths
 from tqdm import tqdm
+from modules.predict_cursor import pixelxy_to_cursor
 
 
 def get_xy_from_filename(filename):
@@ -52,7 +53,7 @@ for filepath in photo_paths:
         datapoint = {
             'filename': filepath,
             'cursor': xy,
-            'cursor_norm': xy / monsize * 2 - 1,
+            'cursor_norm': pixelxy_to_cursor(xy, monsize),
             'landmarks': faces[0],
         }
         left_blink, right_blink = detect_blink(faces[0])

@@ -4,13 +4,12 @@ from .cursor_predictor import train_indices
 
 
 def draw_landmarks(img, faces):
-    LEFT_IRIS = [474, 475, 476, 477]
-    RIGHT_IRIS = [469, 470, 471, 472]
-    img_h, img_w, _ = img.shape
-    print(len(faces) if faces is not None else None)
     if faces is None:
         return img
 
+    LEFT_IRIS = [474, 475, 476, 477]
+    RIGHT_IRIS = [469, 470, 471, 472]
+    img_h, img_w, _ = img.shape
     for points in faces:
         points = np.multiply(points, [img_w, img_h]).astype(int)
         (l_cx, l_cy), l_radius = cv2.minEnclosingCircle(points[LEFT_IRIS])
