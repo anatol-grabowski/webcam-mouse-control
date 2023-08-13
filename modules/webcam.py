@@ -83,3 +83,40 @@ def cams_capture(cams):
         ret, frame = cam.read()
         frames[camname] = frame
     return frames
+
+
+def cam_init(name):
+    webcams = list_webcams()
+    intcams = webcams[[cam for cam in webcams.keys() if 'Integrated' in cam][0]]
+    briocamsname = next((cam for cam in webcams.keys() if 'BRIO' in cam), None)
+    if briocamsname is not None:
+        briocams = webcams[briocamsname]
+
+    if name == 'brio':
+        cam1 = cv2.VideoCapture(briocams[0])
+        cam1.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cam1.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        cam1.set(cv2.CAP_PROP_FPS, 60)
+        return cam1
+
+    if name == 'brioBW':
+        cam2 = cv2.VideoCapture(briocams[2])
+        cam2.set(cv2.CAP_PROP_FRAME_WIDTH, 340)
+        cam2.set(cv2.CAP_PROP_FRAME_HEIGHT, 340)
+        cam2.set(cv2.CAP_PROP_FPS, 30)
+        return cam2
+
+    if name == 'intg':
+        cam3 = cv2.VideoCapture(intcams[0])
+        cam3.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cam3.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        cam3.set(cv2.CAP_PROP_FPS, 30)
+        return cam3
+
+    if name == 'intgbw':
+        cam4 = cv2.VideoCapture(intcams[2])
+        cam4.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cam4.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+        cam4.set(cv2.CAP_PROP_FPS, 30)
+        return cam4
+    raise Exception('unknown cam name')

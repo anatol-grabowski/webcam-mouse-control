@@ -1,3 +1,4 @@
+from screeninfo import get_monitors
 from tqdm import tqdm
 import re
 import cv2
@@ -24,7 +25,7 @@ import pickle
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
-from modules.cursor_predictor import EyePositionPredictor, train_indices  # noqa
+from modules.gaze_predictor import GazePredictor, train_indices  # noqa
 from modules.mediapipe_detect_faces import mediapipe_detect_faces  # noqa
 from modules.predict_cursor import predict_cursor, predict_ensemble, prepare_X, cursor_to_pixelxy, pixelxy_to_cursor  # noqa
 from modules.webcam import list_webcams  # noqa
@@ -40,7 +41,7 @@ photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-09T15:37:18.761700-first-spiral-ok/brio *-1 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *.jpeg',
+    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/*-1 *.jpeg',
 ]
 photo_paths = get_paths(photo_globs)
 
@@ -79,7 +80,7 @@ def on_press(key):
 
 
 mpaths = sys.argv[1:]
-models = [EyePositionPredictor.load_from_file(p) for p in mpaths]
+models = [GazePredictor.load_from_file(p) for p in mpaths]
 scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
 models = {model: 1 for model, score in zip(models, scores)}
 print(f'{scores=}')
@@ -96,13 +97,14 @@ avgs = np.zeros(shape=(numavg, 2))
 
 i = 0
 
-monsize = np.array([2560, 1440])
+monname = 'eDP-1'  # 'eDP-1' (integrated) or 'DP-3' (Dell)
+mon = next((mon for mon in get_monitors() if mon.name == monname))
+monsize = np.array([mon.width, mon.height])
 
 b = None
 points = []
 
-with open(dataset_filepath, 'rb') as file:
-    dataset_list = pickle.load(file)
+dataset_list = Dataset.load().datapoints
 
 bs = {}
 
@@ -122,27 +124,31 @@ def draw_eval():
             for j in tqdm(range(start, end)):
                 filepath = photo_paths[j]
                 fr = cv2.imread(filepath)
-                face = next((dp['landmarks'] for dp in dataset_list if dp['filename'] == filepath), None)
+                face = next((dp['face'] for dp in dataset_list if dp['label'] == filepath), None)
                 if face is None:
                     print('calc', filepath)
-                    cur, *_ = predict_cursor(fr, models)
+                    cur, curs, *_ = predict_cursor(fr, models)
                 else:
                     X = prepare_X(face.reshape(1, *face.shape))
-                    y, *_ = predict_ensemble(models, X)
-                    cur = y.numpy()
+                    y, ys = predict_ensemble(models, X)
+                    cur, curs = y.numpy(), ys.numpy()
                 xy = pixelxy_to_cursor(get_xy_from_filename(filepath), monsize)
-                points.append([xy, cur])
+                points.append([xy, cur, 2, (255, 0, 0)])
+                for cr in curs:
+                    points.append([xy, cr, 1, (255, 0, 0)])
+                points[-1][-1] = (0, 0, 255)
             bs[b] = points
 
     frame = cv2.imread(photo_paths[i])
     imsize = np.array([frame.shape[1], frame.shape[0]])
-    for xy, cur in points:
+    for xy, cur, w, c in points:
         xy = cursor_to_pixelxy(xy, imsize).astype(int)
         cv2.circle(frame, xy, 2, (0, 255, 0), -1)
         if cur is not None:
             cur = cursor_to_pixelxy(cur[0], imsize).astype(int)
-            cv2.circle(frame, cur, 2, (255, 0, 0), -1)
-            cv2.line(frame, cur, xy, (255, 0, 0), 1)
+            cv2.circle(frame, cur, w, c, -1)
+            if w > 1:
+                cv2.line(frame, cur, xy, (255, 0, 0), 1)
 
     cv2.namedWindow('Fullscreen Image', cv2.WINDOW_NORMAL)
     cv2.setWindowProperty('Fullscreen Image', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)

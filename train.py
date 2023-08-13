@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import pickle
-from modules.cursor_predictor import EyePositionPredictor
+from modules.gaze_predictor import GazePredictor
 from modules.dataset import Dataset
 
 
@@ -32,9 +32,9 @@ y_test_tensor = torch.tensor(y_test, dtype=torch.float32)
 # Initialize the model
 input_size = num_landmarks
 output_size = y.shape[1]
-model = EyePositionPredictor(input_size, output_size)
+model = GazePredictor(input_size, output_size)
 if len(sys.argv) >= 3:
-    model = EyePositionPredictor.load_from_file(sys.argv[2])
+    model = GazePredictor.load_from_file(sys.argv[2])
 
 
 class CustomLoss(nn.Module):

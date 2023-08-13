@@ -15,12 +15,13 @@ from modules.mediapipe_detect_faces import mediapipe_detect_faces
 from modules.detect_blink import detect_blink
 from modules.get_paths import get_paths, get_xy_from_filename
 from tqdm import tqdm
-from modules.predict_cursor import pixelxy_to_cursor
+from modules.predict_cursor import pixelxy_to_cursor, cursor_to_pixelxy
+from screeninfo import get_monitors
 
 photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *.jpeg',
+    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/*.jpeg',
 ]
 photo_paths = get_paths(photo_globs)
 
@@ -32,33 +33,37 @@ face_mesh = mp.solutions.face_mesh.FaceMesh(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5,
 )
-dataset = []
+monname = 'eDP-1'  # 'eDP-1' (integrated) or 'DP-3' (Dell)
+mon = next((mon for mon in get_monitors() if mon.name == monname))
+monsize = np.array([mon.width, mon.height])
+dataset = Dataset()
+
 num_blinks = 0
-for filepath in photo_paths:
-    xy = np.array(get_xy_from_filename(filepath))
-    monsize = np.array([2560, 1440])
+for filepath in tqdm(photo_paths):
     img = cv2.imread(filepath)
+    imsize = np.array([img.shape[1], img.shape[0]])
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     faces = mediapipe_detect_faces(face_mesh, rgb)
-    print(filepath, xy, faces is not None)
+    xy = np.array(get_xy_from_filename(filepath))
+    cur = pixelxy_to_cursor(xy, monsize)
+
+    # print(filepath, cur, faces is not None)
     if faces is not None:
-        datapoint = {
-            'filename': filepath,
-            'cursor': xy,
-            'cursor_norm': pixelxy_to_cursor(xy, monsize),
-            'landmarks': faces[0],
-        }
-        left_blink, right_blink = detect_blink(faces[0])
+        face = faces[0]
+        left_blink, right_blink = detect_blink(face)
         if not left_blink and not right_blink:
-            dataset.append(datapoint)
+            dataset.add_datapoint(filepath, face, cur)
         else:
             num_blinks += 1
-            print('skip blink')
-            cv2.putText(img, f"{'L' if left_blink else ' '} {'R' if right_blink else ''}",
-                        (100, 100), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 255, 0), thickness=2)
+            print('skipped')
+            cv2.putText(img, f"blink", (100, 100), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=1, color=(0, 255, 0), thickness=2)
+    cv2.circle(img, cursor_to_pixelxy(cur, imsize).astype(int), 2, (0, 255, 0))
     draw_landmarks(img, faces)
+    cv2.imshow('img', img)
+    cv2.waitKey(1)
 
-Dataset.save_dataset(dataset)
+dataset.store()
 print(f'{num_blinks=}')
 
 cv2.destroyAllWindows()

@@ -1,3 +1,4 @@
+from screeninfo import get_monitors
 import re
 from modules.draw_landmarks import draw_landmarks
 from modules.mp_landmarks_to_points import mp_landmarks_to_points
@@ -22,13 +23,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import pickle
-from modules.cursor_predictor import EyePositionPredictor, train_indices
+from modules.gaze_predictor import GazePredictor, train_indices
 from modules.mediapipe_detect_faces import mediapipe_detect_faces
 from modules.predict_cursor import predict_cursor, cursor_to_pixelxy
 from modules.webcam import list_webcams
 from modules.detect_blink import detect_blink
 from modules.get_paths import get_paths
-from modules.webcam import list_webcams, cams_init, cams_capture
+from modules.webcam import list_webcams, cams_init, cams_capture, cam_init
 
 
 def draw_cursors(frame, cursor, cursors):
@@ -61,7 +62,7 @@ photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-09T15:37:18.761700-first-spiral-ok/brio *-1 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/brio *.jpeg',
+    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/*.jpeg',
 ]
 photo_paths = get_paths(photo_globs)
 
@@ -70,7 +71,7 @@ pyautogui.FAILSAFE = False
 
 
 mpaths = sys.argv[1:]
-models = [EyePositionPredictor.load_from_file(p) for p in mpaths]
+models = [GazePredictor.load_from_file(p) for p in mpaths]
 scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
 models = {model: 1 for model, score in zip(models, scores)}
 print(f'{scores=}')
@@ -85,30 +86,36 @@ print(f'{scores=}')
 numavg = 3
 avgs = np.zeros(shape=(numavg, 2))
 
+monname = 'eDP-1'  # 'eDP-1' (integrated) or 'DP-3' (Dell)
+mon = next((mon for mon in get_monitors() if mon.name == monname))
+monsize = np.array([mon.width, mon.height])
+monxy = np.array([mon.x, mon.y])
+
+camname = 'intg'
+cam = cam_init(camname)
+
 
 def main():
     global avgs, numavg
     print('hello')
 
-    cams = cams_init()
-    monsize = np.array([2560, 1440])
-
     while True:
-        frames = cams_capture(cams)
-        frame = frames['brio']
+        ret, frame = cam.read()
 
     # for filepath in photo_paths:
     #     frame = cv2.imread(filepath)
 
         cursor, cursors, faces = predict_cursor(frame, models)
-        cursor = cursor.reshape(2)
-        cursors = cursors.reshape(-1, 2)
         if cursor is not None:
+            cursor = cursor.reshape(2)
+            cursors = cursors.reshape(-1, 2)
             avgs = np.roll(avgs, -1, axis=0)
             avgs[-1] = cursor
             avg = avgs.mean(axis=0)
             print(avg)
-            pyautogui.moveTo(*cursor_to_pixelxy(avg, monsize), 0.0, pyautogui.easeInOutQuad)
+            xy = cursor_to_pixelxy(avg, monsize) + monxy
+            print(xy)
+            # pyautogui.moveTo(*xy, 0.0, pyautogui.easeInOutQuad)
 
         render(frame, cursor, cursors, faces)
         # input()

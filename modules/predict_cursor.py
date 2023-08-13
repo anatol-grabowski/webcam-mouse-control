@@ -22,7 +22,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import pickle
-from modules.cursor_predictor import EyePositionPredictor, train_indices
+from modules.gaze_predictor import GazePredictor, train_indices
 from modules.mediapipe_detect_faces import mediapipe_detect_faces
 
 face_mesh = mp.solutions.face_mesh.FaceMesh(

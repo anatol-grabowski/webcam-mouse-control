@@ -2,6 +2,7 @@ import sys
 import typing as T
 
 from screeninfo.common import Monitor, ScreenInfoError
+from screeninfo import get_monitors
 
 
 def enumerate_monitors() -> T.Iterable[Monitor]:
@@ -104,7 +105,6 @@ def enumerate_monitors() -> T.Iterable[Monitor]:
                 primary_id = xrandr.XRRGetOutputPrimary(display, root_window)
 
                 try:
-                    print(dir(crtc_info.contents))
                     yield Monitor(
                         x=crtc_info.contents.x,
                         y=crtc_info.contents.y,

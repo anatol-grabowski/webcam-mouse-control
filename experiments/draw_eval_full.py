@@ -24,7 +24,7 @@ import pickle
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
-from modules.cursor_predictor import EyePositionPredictor, train_indices  # noqa
+from modules.gaze_predictor import GazePredictor, train_indices  # noqa
 from modules.mediapipe_detect_faces import mediapipe_detect_faces  # noqa
 from modules.predict_cursor import predict_cursor, predict_ensemble, prepare_X, cursor_to_pixelxy, pixelxy_to_cursor  # noqa
 from modules.webcam import list_webcams  # noqa
@@ -79,7 +79,7 @@ def on_press(key):
 
 
 mpaths = sys.argv[1:]
-models = [EyePositionPredictor.load_from_file(p) for p in mpaths]
+models = [GazePredictor.load_from_file(p) for p in mpaths]
 scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
 models = {model: 1 for model, score in zip(models, scores)}
 print(f'{scores=}')

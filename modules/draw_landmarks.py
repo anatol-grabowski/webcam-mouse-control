@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from .cursor_predictor import train_indices
+from .gaze_predictor import train_indices
 
 
 def draw_landmarks(img, faces):
