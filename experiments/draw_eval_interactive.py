@@ -41,7 +41,8 @@ photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T15:57:06.820873-continuous-ok/brio *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-09T15:37:18.761700-first-spiral-ok/brio *-1 *.jpeg',
-    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/*-1 *.jpeg',
+    # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/*-1 *.jpeg',
+    '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/*.jpeg',
 ]
 photo_paths = get_paths(photo_globs)
 
@@ -81,7 +82,8 @@ def on_press(key):
 
 mpaths = sys.argv[1:]
 models = [GazePredictor.load_from_file(p) for p in mpaths]
-scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
+# scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
+scores = np.arange(len(models))
 models = {model: 1 for model, score in zip(models, scores)}
 print(f'{scores=}')
 # min_perf = scores.min()
@@ -134,9 +136,13 @@ def draw_eval():
                     cur, curs = y.numpy(), ys.numpy()
                 xy = pixelxy_to_cursor(get_xy_from_filename(filepath), monsize)
                 points.append([xy, cur, 2, (255, 0, 0)])
-                for cr in curs:
-                    points.append([xy, cr, 1, (255, 0, 0)])
-                points[-1][-1] = (0, 0, 255)
+                for k, cr in enumerate(curs):
+                    c = (255, 0, 0)
+                    if k == len(curs) - 1:
+                        c = (0, 255, 255)
+                    if k == len(curs) - 2:
+                        c = (0, 0, 200)
+                    points.append([xy, cr, 1, c])
             bs[b] = points
 
     frame = cv2.imread(photo_paths[i])

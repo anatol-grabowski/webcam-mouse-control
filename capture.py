@@ -18,7 +18,7 @@ from screeninfo import get_monitors
 from modules.gaze_predictor import GazePredictor, train_indices
 from modules.mediapipe_detect_faces import mediapipe_detect_faces
 from modules.draw_landmarks import draw_landmarks
-from modules.predict_cursor import predict_cursor, cursor_to_pixelxy
+from modules.predict_cursor import predict_cursor, cursor_to_pixelxy, pixelxy_to_cursor
 from modules.webcam import list_webcams
 from modules.detect_blink import detect_blink
 from modules.get_paths import get_paths
@@ -30,6 +30,8 @@ def draw_cursors(frame, cursor, cursors):
     cv2.circle(frame, cursor_to_pixelxy(cursor, imsize).astype(int), 4, (255, 0, 0), -1)
     for cur in cursors:
         cv2.circle(frame, cursor_to_pixelxy(cur, imsize).astype(int), 2, (255, 0, 0), -1)
+    xy = cursor_to_pixelxy(pixelxy_to_cursor(np.array(pyautogui.position()), monsize), imsize)
+    cv2.circle(frame, xy.astype(int), 3, (0, 255, 0))
 
 
 def render(frame, cursor, cursors, faces):
@@ -85,7 +87,7 @@ steps = np.array([8, 5])
 edge = np.array([edge_offset, edge_offset, monsize[0]-edge_offset, monsize[1]-edge_offset])
 points = spiral(*edge, *steps)
 dstep = np.array([edge[2] - edge[0], edge[3] - edge[1]]) / (steps + 1)
-randomness = 0
+randomness = 1
 r = np.random.randint(-dstep/2, dstep/2, size=[len(points), 2]) * randomness
 points = (points + r).clip([0, 0], [monsize[0] - 3, monsize[1] - 4])
 points += monxy
@@ -99,7 +101,8 @@ os.mkdir(dirpath)
 
 mpaths = sys.argv[2:]
 models = [GazePredictor.load_from_file(p) for p in mpaths]
-scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
+# scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
+scores = np.arange(len(models))
 models = {model: 1 for model, score in zip(models, scores)}
 
 while True:

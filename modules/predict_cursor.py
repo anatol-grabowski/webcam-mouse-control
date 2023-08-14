@@ -37,6 +37,9 @@ face_mesh = mp.solutions.face_mesh.FaceMesh(
 def predict(model, X):
     ''' return torch tensor '''
     model.eval()
+    X = model.scaler.transform(X)
+    X = torch.tensor(X, dtype=torch.float32)
+
     with torch.no_grad():
         y = model(X)
     return y

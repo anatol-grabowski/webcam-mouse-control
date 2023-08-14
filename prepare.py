@@ -23,7 +23,7 @@ photo_globs = [
     # '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/2023-08-08T16:33:38.163179-3-ok/brio *-1 *.jpeg',
     '/home/anatoly/_tot/proj/ml/eye_controlled_mouse/data/*/*.jpeg',
 ]
-photo_paths = get_paths(photo_globs)
+photo_paths = get_paths(photo_globs)[::-1]  # reverse for tqdm to work better
 
 
 face_mesh = mp.solutions.face_mesh.FaceMesh(
@@ -37,15 +37,20 @@ monname = 'eDP-1'  # 'eDP-1' (integrated) or 'DP-3' (Dell)
 mon = next((mon for mon in get_monitors() if mon.name == monname))
 monsize = np.array([mon.width, mon.height])
 dataset = Dataset()
+ds = Dataset.load()
 
 num_blinks = 0
 for filepath in tqdm(photo_paths):
+    xy = np.array(get_xy_from_filename(filepath))
+    cur = pixelxy_to_cursor(xy, monsize)
+    datapoint = next((dp for dp in ds.datapoints if dp['label'] == filepath), None)
+    if datapoint is not None:
+        dataset.add_datapoint(filepath, datapoint['face'], cur)
+        continue
     img = cv2.imread(filepath)
     imsize = np.array([img.shape[1], img.shape[0]])
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     faces = mediapipe_detect_faces(face_mesh, rgb)
-    xy = np.array(get_xy_from_filename(filepath))
-    cur = pixelxy_to_cursor(xy, monsize)
 
     # print(filepath, cur, faces is not None)
     if faces is not None:

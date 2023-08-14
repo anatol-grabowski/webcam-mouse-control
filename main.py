@@ -72,7 +72,8 @@ pyautogui.FAILSAFE = False
 
 mpaths = sys.argv[1:]
 models = [GazePredictor.load_from_file(p) for p in mpaths]
-scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
+# scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
+scores = np.arange(len(models))
 models = {model: 1 for model, score in zip(models, scores)}
 print(f'{scores=}')
 # min_perf = scores.min()
@@ -87,11 +88,13 @@ numavg = 3
 avgs = np.zeros(shape=(numavg, 2))
 
 monname = 'eDP-1'  # 'eDP-1' (integrated) or 'DP-3' (Dell)
+# monname = 'DP-3'
 mon = next((mon for mon in get_monitors() if mon.name == monname))
 monsize = np.array([mon.width, mon.height])
 monxy = np.array([mon.x, mon.y])
 
 camname = 'intg'
+# camname = 'brio'
 cam = cam_init(camname)
 
 
