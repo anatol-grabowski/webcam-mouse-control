@@ -51,7 +51,7 @@ def predict_ensemble(models, X):
     for model, weight in models.items():
         prediction = predict(model, X)
         ys.append(prediction)
-    ys = torch.stack(ys)
+    ys = torch.stack(ys).view(len(models), len(X), 2)
     weights = torch.tensor([w for w in models.values()])
     y = torch.mean(ys * weights.view(-1, 1, 1), dim=0)
     return y, ys
@@ -66,9 +66,11 @@ def prepare_X(faces):
 def predict_cursor(frame, models):
     '''cursor - contains cursor positions in interval [-1, 1] for each face'''
     rgb = cv2.cvtColor(frame, 1, cv2.COLOR_BGR2RGB)
-    faces = mediapipe_detect_faces(face_mesh, rgb, num_warmup=1, num_avg=3)
+    faces = mediapipe_detect_faces(face_mesh, rgb, num_warmup=2, num_avg=3)
     if faces is None:
         return None, None, None
+    if len(models) == 0:
+        return None, None, faces
     X = prepare_X(faces)
     y, ys = predict_ensemble(models, X)
     cursor = y.numpy()

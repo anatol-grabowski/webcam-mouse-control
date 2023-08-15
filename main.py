@@ -87,15 +87,16 @@ print(f'{scores=}')
 numavg = 3
 avgs = np.zeros(shape=(numavg, 2))
 
-monname = 'eDP-1'  # 'eDP-1' (integrated) or 'DP-3' (Dell)
-# monname = 'DP-3'
+camname = 'intg'
+camname = 'brio'
+cam = cam_init(camname)
+if camname == 'intg':
+    monname = 'eDP-1'  # 'eDP-1' (integrated) or 'DP-3' (Dell)
+else:
+    monname = 'DP-3'
 mon = next((mon for mon in get_monitors() if mon.name == monname))
 monsize = np.array([mon.width, mon.height])
 monxy = np.array([mon.x, mon.y])
-
-camname = 'intg'
-# camname = 'brio'
-cam = cam_init(camname)
 
 
 def main():

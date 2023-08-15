@@ -1,7 +1,8 @@
 import pickle
 import numpy as np
+import os
 
-dataset_filepath = './data/prepared.pickle'
+dataset_filepath = './data/datasets'
 
 # should not have local imports for unpickling in kaggle
 
@@ -21,8 +22,14 @@ class Dataset():
 
     def load(filepath=dataset_filepath):
         ds = Dataset()
-        with open(filepath, 'rb') as file:
-            ds.datapoints = pickle.load(file)
+        if os.path.isdir(filepath):
+            for fname in os.listdir(filepath):
+                with open(f'{filepath}/{fname}', 'rb') as file:
+                    datapoints = pickle.load(file)
+                    ds.datapoints.extend(datapoints)
+        else:
+            with open(filepath, 'rb') as file:
+                ds.datapoints = pickle.load(file)
         return ds
 
     def store(self, filepath=dataset_filepath):
