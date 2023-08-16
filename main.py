@@ -70,7 +70,7 @@ photo_paths = get_paths(photo_globs)
 pyautogui.FAILSAFE = False
 
 
-mpaths = sys.argv[1:]
+mpaths = sys.argv[2:]
 models = [GazePredictor.load_from_file(p) for p in mpaths]
 # scores = np.array([float(re.match(r'.* (0.\d+) .*', p)[1]) for p in mpaths])
 scores = np.arange(len(models))
@@ -84,11 +84,12 @@ print(f'{scores=}')
 # normalized_weights = [weight / sum_weights for weight in weights]
 # print("Normalized Weights:", normalized_weights)
 
-numavg = 3
+numavg = 6
 avgs = np.zeros(shape=(numavg, 2))
 
 camname = 'intg'
 camname = 'brio'
+camname = sys.argv[1]
 cam = cam_init(camname)
 if camname == 'intg':
     monname = 'eDP-1'  # 'eDP-1' (integrated) or 'DP-3' (Dell)
@@ -98,9 +99,11 @@ mon = next((mon for mon in get_monitors() if mon.name == monname))
 monsize = np.array([mon.width, mon.height])
 monxy = np.array([mon.x, mon.y])
 
+mouse_controller = pynput.mouse.Controller()
+
 
 def main():
-    global avgs, numavg
+    global avgs, numavg, i
     print('hello')
 
     while True:
@@ -109,17 +112,17 @@ def main():
     # for filepath in photo_paths:
     #     frame = cv2.imread(filepath)
 
-        cursor, cursors, faces = predict_cursor(frame, models)
-        if cursor is not None:
-            cursor = cursor.reshape(2)
-            cursors = cursors.reshape(-1, 2)
-            avgs = np.roll(avgs, -1, axis=0)
-            avgs[-1] = cursor
-            avg = avgs.mean(axis=0)
-            print(avg)
-            xy = cursor_to_pixelxy(avg, monsize) + monxy
-            print(xy)
-            # pyautogui.moveTo(*xy, 0.0, pyautogui.easeInOutQuad)
+        for i in range(1):
+            cursor, cursors, faces = predict_cursor(frame, models)
+            if cursor is not None:
+                cursor = cursor.reshape(2)
+                cursors = cursors.reshape(-1, 2)
+                avgs = np.roll(avgs, -1, axis=0)
+                avgs[-1] = cursor
+
+        avg = avgs.mean(axis=0)
+        xy = cursor_to_pixelxy(avg, monsize) + monxy
+        mouse_controller.position = xy
 
         render(frame, cursor, cursors, faces)
         # input()

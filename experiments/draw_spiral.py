@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 from modules.spiral import spiral  # noqa
+from modules.interpolate_points import interpolate_points  # noqa
 
 # Example usage
 edge_offset = 10
@@ -18,6 +19,8 @@ points = spiral(*edge, *steps)
 dstep = np.array([edge[2] - edge[0], edge[3] - edge[1]]) / (steps + 1)
 r = np.random.randint(-dstep/2, dstep/2, size=[len(points), 2])
 points = (points + r).clip([0, 0], monsize - 2)
+points = points * [-1, 1] + [monsize[0], 0]
+points = np.array(interpolate_points(points, 50))
 print(points.max(axis=0))
 # for x, y in points:
 #     pyautogui.moveTo(x, y)

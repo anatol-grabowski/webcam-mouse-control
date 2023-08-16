@@ -16,9 +16,10 @@ def draw_landmarks(img, faces):
         (r_cx, r_cy), r_radius = cv2.minEnclosingCircle(points[RIGHT_IRIS])
         center_left = np.array([l_cx, l_cy], dtype=np.int32)
         center_right = np.array([r_cx, r_cy], dtype=np.int32)
-        cv2.circle(img, center_left, int(l_radius), (0, 255, 0), 1, cv2.LINE_AA)
-        cv2.circle(img, center_right, int(r_radius), (0, 255, 0), 1, cv2.LINE_AA)
+        # cv2.circle(img, center_left, int(l_radius), (0, 255, 0), 1, cv2.LINE_AA)
+        # cv2.circle(img, center_right, int(r_radius), (0, 255, 0), 1, cv2.LINE_AA)
 
-        for x, y in points[train_indices]:
-            cv2.circle(img, (x, y), 1, (255, 255, 0), -1)
+        # for x, y in points[train_indices]:
+        #     cv2.circle(img, (x, y), 1, (255, 255, 0), -1)
+        cv2.circle(img, center_left, 1, (0, 255, 0), 1)
         cv2.circle(img, center_right, 1, (0, 255, 0), 1)

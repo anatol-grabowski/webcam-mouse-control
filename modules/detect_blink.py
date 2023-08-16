@@ -1,8 +1,7 @@
 import numpy as np
 
 
-def detect_blink(face):
-    blink_threshold = 0.25
+def detect_blink(face, blink_threshold=0.25):
     left_h = np.linalg.norm(face[386] - face[374])
     left_w = np.linalg.norm(face[362] - face[263])
     left_blink = left_h < blink_threshold * left_w

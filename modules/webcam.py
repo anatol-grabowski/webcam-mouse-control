@@ -94,8 +94,8 @@ def cam_init(name):
 
     if name == 'brio':
         cam1 = cv2.VideoCapture(briocams[0])
-        cam1.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        cam1.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        cam1.set(cv2.CAP_PROP_FRAME_WIDTH, 960)
+        cam1.set(cv2.CAP_PROP_FRAME_HEIGHT, 540)
         cam1.set(cv2.CAP_PROP_FPS, 60)
         return cam1
 
