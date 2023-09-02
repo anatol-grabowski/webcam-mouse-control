@@ -1,3 +1,4 @@
+import torch.optim as optim
 import torch
 import torch.nn as nn
 import pickle
@@ -32,17 +33,18 @@ class GazePredictor(nn.Module):
         self.scaler = StandardScaler()
         self.arch = arch
         self.fc1 = nn.Linear(*arch[0:1+1])
-        self.relu = nn.Sigmoid()
+        self.relu = nn.LeakyReLU()
         if len(arch) > 3:
             self.hidden1 = nn.Linear(*arch[1:2+1])
-            self.relu2 = nn.Sigmoid()
+            self.relu2 = nn.LeakyReLU()
         if len(arch) > 4:
             self.hidden2 = nn.Linear(*arch[2:3+1])
-            self.relu3 = nn.Sigmoid()
+            self.relu3 = nn.LeakyReLU()
         if len(arch) > 5:
             self.hidden3 = nn.Linear(*arch[3:4+1])
-            self.relu4 = nn.Sigmoid()
+            self.relu4 = nn.LeakyReLU()
         self.fc2 = nn.Linear(*arch[-2:])
+        self.optimizer = optim.Adam(self.parameters())
 
     def forward(self, x):
         x = self.fc1(x)
@@ -66,9 +68,14 @@ class GazePredictor(nn.Module):
         print('saved model to file', filepath)
         self.to(device)
 
+    @staticmethod
     def load_from_file(filepath=model_filepath):
+
         with open(filepath, 'rb') as file:
-            model = pickle.load(file)
+            state_dict, scaler = pickle.load(file)
+            model = GazePredictor([168, 256, 64, 2])
+            model.load_state_dict(state_dict)
+            model.scaler = scaler
         return model
 
     def model_name(self):

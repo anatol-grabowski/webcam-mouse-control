@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 import os
+import re
 
 dataset_filepath = './data/datasets'
 
@@ -24,6 +25,8 @@ class Dataset():
         ds = Dataset()
         if os.path.isdir(filepath):
             for fname in os.listdir(filepath):
+                if re.match(r'.*\.pickle$', fname) is None:
+                    continue
                 with open(f'{filepath}/{fname}', 'rb') as file:
                     datapoints = pickle.load(file)
                     ds.datapoints.extend(datapoints)

@@ -21,7 +21,7 @@ random.seed(seed)
 np.random.seed(seed)
 
 
-dataset_filepath = './data/datasets'
+dataset_filepath = './data/datasets/intg-static'
 X, y = Dataset.load(dataset_filepath).get_Xy()
 X = X.reshape(len(X), -1, 2)[:, train_indices].reshape(len(X), len(train_indices) * 2)
 num_landmarks = X.shape[1]
@@ -29,7 +29,10 @@ num_landmarks = X.shape[1]
 
 input_size = num_landmarks
 output_size = y.shape[1]
-model = GazePredictor([input_size, 256, output_size])
+model = GazePredictor([input_size, 256, 64, output_size])
+# model = EyePositionPredictor.load_from_file('/kaggle/working/model-168-512-256-128-32-2 0.0063 #1400k [mse].pickle')
+if len(sys.argv) >= 2:
+    model = GazePredictor.load_from_file(sys.argv[1])
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 # X_train, _, y_train, _ = train_test_split(X_train, y_train, test_size=0.5, random_state=42) # throw out part of the training data
@@ -49,11 +52,6 @@ X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)
 y_train_tensor = torch.tensor(y_train, dtype=torch.float32).to(device)
 X_test_tensor = torch.tensor(X_test, dtype=torch.float32).to(device)
 y_test_tensor = torch.tensor(y_test, dtype=torch.float32).to(device)
-
-
-# model = EyePositionPredictor.load_from_file('/kaggle/working/model-168-512-256-128-32-2 0.0063 #1400k [mse].pickle')
-# if len(sys.argv) >= 3:
-#     model = EyePositionPredictor.load_from_file(sys.argv[2])
 
 
 class Exp_diff_abs(nn.Module):
@@ -122,34 +120,49 @@ best_mse = np.inf   # init to infinity
 best_weights = None
 
 
-def train(lr, num_epochs):
+def train(num_epochs):
     global epoch, best_mse
 
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-#     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    # optimizer = optim.Adam(model.parameters(), lr=lr)
+    #     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+
+    test_loss = evaluate()
+    print(f'Test loss: {test_loss.item():.5f}')
+
     e0 = epoch
     t0 = time.time()
     for i in range(num_epochs):
         epoch += 1
         model.train()
-        optimizer.zero_grad()
+
+#         for batch_X, batch_y in train_loader:
+#             optimizer.zero_grad()
+#             outputs = model(batch_X)
+#             loss = criterion(outputs, batch_y)
+#             loss.backward()
+#             optimizer.step()
+
+        model.optimizer.zero_grad()
         outputs = model(X_train_tensor)
         loss = criterion(outputs, y_train_tensor)
         loss.backward()
-        optimizer.step()
-        if epoch % 10000 == 0:
-            dt = time.time() - t0
+        model.optimizer.step()
+        dt = time.time() - t0
+        if dt > 10:
             t0 = time.time()
             test_loss = evaluate()
             print(f'Epoch {epoch}/{e0 + num_epochs}, {dt:.3f}s, Loss: {loss.item():.6f}, Test loss: {test_loss.item():.5f}')
-            history.append([epoch, float(test_loss)])
             mse = float(test_loss)
+            history.append([epoch, mse])
+#             plt.plot(*list(zip(*history)))
+#             plt.show()
             if mse < best_mse-0.0002:
                 best_mse = mse
                 model.save_to_file(f'{model_dirpath}/model-{model.model_name()} best [{criterion.loss_name()}].pickle')
-            if epoch % 100000 == 0:
-                model.save_to_file(
-                    f'{model_dirpath}/model-{model.model_name()} {test_loss.item():.4f} #{epoch // 1000}k [{criterion.loss_name()}].pickle')
+        if epoch % 100000 == 0:
+            model.save_to_file(
+                f'{model_dirpath}/model-{model.model_name()} tr{loss.item():.4f} ts{test_loss.item():.4f} #{epoch // 1000}k {criterion.loss_name()}.pickle')
+
     evaluate()
 
 
@@ -158,5 +171,4 @@ print('train', X_train_tensor.size(), y_train_tensor.size(), 'mean xy', y.mean(a
 print('test ', X_test_tensor.size(), y_test_tensor.size())
 print(model.model_name(), criterion.loss_name())
 
-train(1e-3, int(100e3))
-train(1e-4, int(200e3))
+train(int(1000e3))

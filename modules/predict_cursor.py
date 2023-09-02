@@ -59,6 +59,7 @@ def predict_ensemble(models, X):
 
 def prepare_X(faces):
     X = faces[:, train_indices].reshape(len(faces), len(train_indices)*2)
+    # X = faces[:, :].reshape(len(faces), -1)
     X = torch.tensor(X, dtype=torch.float32)
     return X
 
@@ -83,6 +84,6 @@ def cursor_to_pixelxy(cursor, monsize):
     return xy
 
 
-def pixelxy_to_cursor(xy, monsize):
-    cursor = xy / monsize * 2 - 1
+def pixelxy_to_cursor(xy, monsize, monxy):
+    cursor = (xy - monxy) / monsize * 2 - 1
     return cursor
