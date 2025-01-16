@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Path Recorder</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #333;
+    }
+    video {
+      position: absolute;
+      transform: scaleX(-1); /* Flip horizontally */
+    }
+    canvas {
+      position: absolute;
+      z-index: 2;
+    }
+    .controls {
+      position: absolute;
+      z-index: 3;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px;
+      border-radius: 5px;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    select, button {
+      margin-bottom: 10px;
+      padding: 5px;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <video autoplay playsinline></video>
+  <canvas></canvas>
+  <div class="controls">
+    <select id="cameraSelect"></select>
+    <select id="cameraModeSelect"></select>
+    <button id="fullscreenButton">Go Fullscreen</button>
+    <button id="startStopCaptureButton">Start Capture</button>
+    <button id="downloadButton" disabled>Download Capture</button>
+    <button id="regeneratePathButton">Regenerate Path</button>
+  </div>
+  <script>
+    const video = document.querySelector('video');
+    const canvas = document.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const cameraModeSelect = document.getElementById('cameraModeSelect');
+    const fullscreenButton = document.getElementById('fullscreenButton');
+    const startStopCaptureButton = document.getElementById('startStopCaptureButton');
+    const downloadButton = document.getElementById('downloadButton');
+    const regeneratePathButton = document.getElementById('regeneratePathButton');
+    let mediaStream = null;
+    let animationFrameId = null;
+    let isRecording = false;
+    let recordedPoints = [];
+    let crosshairIndex = 0;
+    let path = [];
+    let recordingStartTime = null;
+    let selectedCameraId = null;
+    let selectedCameraMode = null;
+
+    // Resize canvas and regenerate path when window resizes
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      generatePath();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Generate a random path
+    function generatePath() {
+      path = [];
+      for (let i = 0; i < 100; i++) {
+        path.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height
+        });
+      }
+      crosshairIndex = 0;
+      drawFrame();
+    }
+
+    // Draw the video and overlay the path
+    function drawFrame() {
+      if (!mediaStream) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Draw the path
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      path.forEach((point, index) => {
+        if (index === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      ctx.stroke();
+
+      // Draw the crosshair
+      const crosshair = path[crosshairIndex];
+      ctx.strokeStyle = 'green';
+      ctx.beginPath();
+      ctx.moveTo(crosshair.x - 10, crosshair.y);
+      ctx.lineTo(crosshair.x + 10, crosshair.y);
+      ctx.moveTo(crosshair.x, crosshair.y - 10);
+      ctx.lineTo(crosshair.x, crosshair.y + 10);
+      ctx.stroke();
+
+      // Record the crosshair position if recording
+      if (isRecording) {
+        const frame = video.requestVideoFrameCallback((now, metadata) => {
+          recordedPoints.push({
+            x: crosshair.x,
+            y: crosshair.y,
+            frameNumber: metadata.presentedFrames,
+            timestamp: (Date.now() - recordingStartTime) / 1000
+          });
+        });
+      }
+
+      animationFrameId = requestAnimationFrame(drawFrame);
+    }
+
+    // Switch to the selected camera
+    async function switchCamera() {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+      const constraints = {
+        video: {
+          deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
+          width: selectedCameraMode ? selectedCameraMode.width : undefined,
+          height: selectedCameraMode ? selectedCameraMode.height : undefined,
+          frameRate: selectedCameraMode ? selectedCameraMode.frameRate : undefined
+        }
+      };
+      mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = mediaStream;
+      drawFrame();
+    }
+
+    // Populate camera and mode options
+    async function populateCameraOptions() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      cameraSelect.innerHTML = '';
+      videoDevices.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || `Camera ${index + 1}`;
+        cameraSelect.appendChild(option);
+      });
+      selectedCameraId = videoDevices[0]?.deviceId;
+      cameraSelect.addEventListener('change', (e) => {
+        selectedCameraId = e.target.value;
+        switchCamera();
+      });
+
+      // Populate camera mode options
+      // (Hardcoded for now, real mode selection will require advanced APIs like MediaStreamTrack capabilities)
+      cameraModeSelect.innerHTML = `
+        <option value="hd">HD (1280x720, 30fps)</option>
+        <option value="fullhd">Full HD (1920x1080, 60fps)</option>
+      `;
+      cameraModeSelect.addEventListener('change', (e) => {
+        const value = e.target.value;
+        selectedCameraMode = value === 'hd'
+          ? { width: 1280, height: 720, frameRate: 30 }
+          : { width: 1920, height: 1080, frameRate: 60 };
+        switchCamera();
+      });
+      switchCamera();
+    }
+
+    // Start or stop recording
+    function toggleRecording() {
+      isRecording = !isRecording;
+      startStopCaptureButton.textContent = isRecording ? 'Stop Capture' : 'Start Capture';
+      if (isRecording) {
+        recordingStartTime = Date.now();
+        recordedPoints = [];
+      } else {
+        downloadButton.disabled = false;
+      }
+    }
+
+    // Download video and points JSON
+    function downloadFiles() {
+      const pointsBlob = new Blob([JSON.stringify({
+        points: recordedPoints,
+        camera: selectedCameraId,
+        mode: selectedCameraMode,
+        recordingStartedAt: new Date(recordingStartTime).toISOString()
+      }, null, 2)], { type: 'application/json' });
+      const pointsURL = URL.createObjectURL(pointsBlob);
+      const pointsLink = document.createElement('a');
+      pointsLink.href = pointsURL;
+      pointsLink.download = 'points.json';
+      pointsLink.click();
+
+      // Video download not implemented in this demo
+      alert('Video download is not implemented in this demo.');
+    }
+
+    // Handle key presses for moving the crosshair
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'j') {
+        crosshairIndex = Math.min(crosshairIndex + 1, path.length - 1);
+      } else if (e.key === 'k') {
+        crosshairIndex = Math.max(crosshairIndex - 1, 0);
+      }
+    });
+
+    // Fullscreen toggle
+    fullscreenButton.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+    // Initialize
+    regeneratePathButton.addEventListener('click', generatePath);
+    startStopCaptureButton.addEventListener('click', toggleRecording);
+    downloadButton.addEventListener('click', downloadFiles);
+    populateCameraOptions();
+    resizeCanvas();
+  </script>
+</body>
+</html>
