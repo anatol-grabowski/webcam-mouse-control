@@ -312,8 +312,36 @@
     }
     stopCaptureButton.addEventListener('click', stopRecording);
 
+    async function upload(blob, filename) {
+        try {
+            // Create a FormData object
+            const formData = new FormData();
+            formData.append('file', blob, filename);
+
+            // Make the POST request to the /upload endpoint
+            const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+            });
+
+            // Handle the response
+            if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+            }
+
+            const result = await response.text();
+            console.log('Upload successful:', result);
+            return result; // Return the server's response
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            throw error; // Rethrow the error for further handling
+        }
+    }
+
+
     // Download video and points JSON
     function downloadFiles() {
+        const name = new Date().toISOString().replace(/:/g, '-')
         const pointsBlob = new Blob([JSON.stringify({
             camera: selectedCameraId,
             mode: selectedCameraMode,
@@ -321,19 +349,21 @@
             window: recordingMetadata,
             points: recordedPoints,
         }, null, 2)], { type: 'application/json' });
-        const pointsURL = URL.createObjectURL(pointsBlob);
-        const pointsLink = document.createElement('a');
-        pointsLink.href = pointsURL;
-        pointsLink.download = 'points.json';
-        pointsLink.click();
+        // const pointsURL = URL.createObjectURL(pointsBlob);
+        // const pointsLink = document.createElement('a');
+        // pointsLink.href = pointsURL;
+        // pointsLink.download = name + '.json';
+        // pointsLink.click();
+        upload(pointsBlob, name + '.json')
 
 
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.download = 'recording.webm';
-        downloadLink.click()
+        // const url = URL.createObjectURL(blob);
+        // const downloadLink = document.createElement('a');
+        // downloadLink.href = url;
+        // downloadLink.download = name + '.webm';
+        // downloadLink.click()
+        upload(blob, name + '.webm')
     }
 
     function toggleFullscreen() {
