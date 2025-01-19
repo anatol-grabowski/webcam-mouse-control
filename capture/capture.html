@@ -133,7 +133,11 @@
 
     // Generate a random path
     function generatePath() {
-      path = spiral(10, 10, canvas.width-10, canvas.height-10, 15, 10, 1, 'clockwise').map(([x, y]) => ({ x, y}))
+        const corner = Math.floor(Math.random() * 4)
+        const direction = Math.floor(Math.random() * 2)
+        const steps = Math.floor(Math.random() * 10)
+      path = spiral(10, 10, canvas.width-10, canvas.height-10, 10+steps, 5+steps, corner, direction)
+        .map(([x, y]) => ({ x, y}))
       crosshairIndex = 0;
       drawFrame();
     }
